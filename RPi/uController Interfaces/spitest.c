@@ -26,11 +26,48 @@ int main(int argc, char **argv)
 	printf("Initializing bcm2835.\n");
 	if(!bcm2835_init())return 1;
 	printf("Initialize bcm2835 successful.\n");
+	/*******************************************************************
+	 * The folowing section is pulled from the bcm2835_init() function 
+	 * for troubleshooting.
+	 * ****************************************************************/
+	volatile uint32_t* paddr;
+	/* Set the SPI0 pins to the Alt 0 function to enable SPI0 access on them */
+	printf("Setting CE1 pin function.\n");
+    //bcm2835_gpio_fsel(RPI_GPIO_P1_26, BCM2835_GPIO_FSEL_ALT0); /* CE1 */
+    /** Entering into bcm2835_gpio_fsel() **/
+    /* Function selects are 10 pins per 32 bit word, 3 bits per pin */
+    paddr = bcm2835_gpio + BCM2835_GPFSEL0/4 + (RPI_GPIO_P1_26/10);
+    printf("Register value = %p\n", paddr);
+    uint8_t   shift = (RPI_GPIO_P1_26 % 10) * 3;
+    printf("shift = %u\n", shift);
+    uint32_t  mask = BCM2835_GPIO_FSEL_MASK << shift;
+    printf("mask = %u\n", mask);
+    uint32_t  value = BCM2835_GPIO_FSEL_ALT0 << shift;
+    printf("value = %u\n", value);
+    bcm2835_peri_set_bits(paddr, value, mask);
+    /** End bcm2835_gpio_fsel() **/
+    
+    printf("Setting CE0 pin function.\n");
+    bcm2835_gpio_fsel(RPI_GPIO_P1_24, BCM2835_GPIO_FSEL_ALT0); /* CE0 */
+    printf("Setting MISO pin function.\n");
+    bcm2835_gpio_fsel(RPI_GPIO_P1_21, BCM2835_GPIO_FSEL_ALT0); /* MISO */
+    printf("Setting MOSI pin function.\n");
+    bcm2835_gpio_fsel(RPI_GPIO_P1_19, BCM2835_GPIO_FSEL_ALT0); /* MOSI */
+    printf("Setting CLK pin function.\n");
+    bcm2835_gpio_fsel(RPI_GPIO_P1_23, BCM2835_GPIO_FSEL_ALT0); /* CLK */
+    
+    /* Set the SPI CS register to the some sensible defaults */
+    paddr = bcm2835_spi0 + BCM2835_SPI0_CS/4;
+    bcm2835_peri_write(paddr, 0); /* All 0s */
+    
+    /* Clear TX and RX fifos */
+    bcm2835_peri_write_nb(paddr, BCM2835_SPI0_CS_CLEAR);
+	/**********End pull from bcm2835_init()*****************/
 	
-	/* Set up the SPI module */
-	printf("Initializing SPI.\n");
-	bcm2835_spi_begin();
-	printf("Initialize SPI successful.\n");
+	///* Set up the SPI module */
+	//printf("Initializing SPI.\n");
+	//bcm2835_spi_begin();
+	//printf("Initialize SPI successful.\n");
 	
 	/* Call initialize() function */
 	initialize();
